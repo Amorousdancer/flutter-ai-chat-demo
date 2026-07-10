@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'pages/home_page.dart';
+import 'pages/main_shell_page.dart';
 
 class OfferLabApp extends StatelessWidget {
   const OfferLabApp({super.key});
@@ -17,7 +17,7 @@ class OfferLabApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const MainShellPage(),
     );
   }
 }
