@@ -24,8 +24,10 @@ void main() {
     await tester.tap(find.text('我的'));
     await tester.pumpAndSettle();
 
-    expect(find.text('个人中心'), findsOneWidget);
-    expect(find.text('我的页面骨架已就绪'), findsOneWidget);
+    expect(find.text('候选人同学'), findsOneWidget);
+    expect(find.text('累计练习'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('应用版本'), 200);
+    expect(find.text('应用版本'), findsOneWidget);
   });
 
   testWidgets('opens scenario detail and starts a practice session', (
@@ -91,6 +93,36 @@ void main() {
     expect(find.textContaining('你的回答方向是对的'), findsOneWidget);
   });
 
+  testWidgets('shows a sensitive-input hint without blocking send', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const OfferLabApp());
+
+    await tester.tap(find.text('Flutter 开发面试'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('start-practice-button')),
+      200,
+    );
+    await tester.tap(find.byKey(const Key('start-practice-button')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('chat-input')),
+      '我的手机号是13812345678，这里还涉及客户名单。',
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('chat-input-notice')), findsOneWidget);
+    expect(find.textContaining('演示时建议改成模糊描述'), findsOneWidget);
+
+    final sendButton = tester.widget<FilledButton>(
+      find.byKey(const Key('send-button')),
+    );
+    expect(sendButton.onPressed, isNotNull);
+  });
+
   testWidgets('finishes practice and shows feedback in history', (tester) async {
     await tester.pumpWidget(const OfferLabApp());
 
@@ -128,9 +160,9 @@ void main() {
     expect(find.textContaining('分'), findsWidgets);
     expect(find.text('优化回答示例'), findsOneWidget);
 
-    await tester.pageBack();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('记录'));
@@ -144,5 +176,15 @@ void main() {
 
     expect(find.text('关键片段'), findsOneWidget);
     expect(find.text('继续改进'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('87 分'), findsWidgets);
+    expect(find.textContaining('最近练习：'), findsOneWidget);
   });
 }
