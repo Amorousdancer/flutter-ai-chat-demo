@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/chat_message.dart';
 import '../models/practice_record.dart';
 import '../models/scenario.dart';
+import '../services/input_guard.dart';
 import '../services/practice_store.dart';
 import '../services/mock_interview_service.dart';
 import 'feedback_page.dart';
@@ -13,11 +14,13 @@ class ChatPage extends StatefulWidget {
     required this.scenario,
     required this.mode,
     this.service = const MockInterviewService(),
+    this.inputGuard = const InputGuard(),
   });
 
   final Scenario scenario;
   final InterviewMode mode;
   final MockInterviewService service;
+  final InputGuard inputGuard;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -62,15 +65,20 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {});
   }
 
+  InputGuardResult get _inputGuardResult {
+    return widget.inputGuard.evaluate(_controller.text);
+  }
+
   bool get _canSend {
-    return !_isReplying && _controller.text.trim().isNotEmpty;
+    return !_isReplying && _inputGuardResult.canSend;
   }
 
   Future<void> _sendMessage() async {
-    final content = _controller.text.trim();
-    if (content.isEmpty || _isReplying) {
+    final guardResult = _inputGuardResult;
+    if (!guardResult.canSend || _isReplying) {
       return;
     }
+    final content = guardResult.normalizedText;
 
     final userMessage = ChatMessage(
       id: 'user-${_messageCounter++}',
@@ -162,6 +170,12 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final inputGuardResult = _inputGuardResult;
+    final hintColor = switch (inputGuardResult.level) {
+      InputNoticeLevel.error => theme.colorScheme.error,
+      InputNoticeLevel.hint => theme.colorScheme.secondary,
+      InputNoticeLevel.none => theme.colorScheme.onSurfaceVariant,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -212,27 +226,48 @@ class _ChatPageState extends State<ChatPage> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('chat-input'),
-                      controller: _controller,
-                      minLines: 1,
-                      maxLines: 4,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                      decoration: const InputDecoration(
-                        hintText: '输入你的回答...',
-                        border: OutlineInputBorder(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          key: const Key('chat-input'),
+                          controller: _controller,
+                          minLines: 1,
+                          maxLines: 4,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          decoration: const InputDecoration(
+                            hintText: '输入你的回答...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        key: const Key('send-button'),
+                        onPressed: _canSend ? _sendMessage : null,
+                        child: const Text('发送'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton(
-                    key: const Key('send-button'),
-                    onPressed: _canSend ? _sendMessage : null,
-                    child: const Text('发送'),
+                  const SizedBox(height: 8),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: inputGuardResult.hasMessage
+                        ? Text(
+                            key: const Key('chat-input-notice'),
+                            inputGuardResult.message!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: hintColor,
+                            ),
+                          )
+                        : const SizedBox(
+                            key: Key('chat-input-notice-empty'),
+                            height: 0,
+                          ),
                   ),
                 ],
               ),
