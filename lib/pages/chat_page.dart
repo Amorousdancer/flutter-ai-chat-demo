@@ -41,6 +41,11 @@ class _ChatPageState extends State<ChatPage> {
     return !_isReplying && _userMessageCount >= 3;
   }
 
+  int get _remainingTurnsToFinish {
+    final remaining = 3 - _userMessageCount;
+    return remaining > 0 ? remaining : 0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -181,10 +186,11 @@ class _ChatPageState extends State<ChatPage> {
       appBar: AppBar(
         title: Text(widget.scenario.title),
         actions: [
-          TextButton(
+          TextButton.icon(
             key: const Key('finish-practice-button'),
             onPressed: _canFinishPractice ? _finishPractice : null,
-            child: const Text('结束练习'),
+            icon: const Icon(Icons.flag_outlined, size: 18),
+            label: const Text('结束练习'),
           ),
         ],
       ),
@@ -192,19 +198,49 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.mode.label,
-                  style: theme.textTheme.labelLarge,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(
+                          label: Text(widget.mode.label),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Chip(
+                          label: Text(
+                            _canFinishPractice
+                                ? '已满足结束条件'
+                                : '再完成 $_remainingTurnsToFinish 轮可结束',
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${widget.scenario.roleName} · ${widget.scenario.roleTitle}',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.scenario.subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '${widget.scenario.roleName} · ${widget.scenario.roleTitle}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
+              ),
             ),
           ),
           Expanded(
@@ -289,13 +325,16 @@ class _MessageBubble extends StatelessWidget {
     final isUser = message.sender == ChatSender.user;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 320),
+          constraints: BoxConstraints(
+            maxWidth: screenWidth * 0.78,
+          ),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: isUser ? colorScheme.primary : colorScheme.surfaceContainerHigh,
@@ -322,12 +361,18 @@ class _TypingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(bottom: 12),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Card(
-          child: Padding(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Text('AI 正在输入...'),
           ),

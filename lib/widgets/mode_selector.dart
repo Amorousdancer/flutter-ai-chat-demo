@@ -14,20 +14,26 @@ class ModeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const modes = InterviewMode.values;
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: modes
-          .map(
-            (mode) => ChoiceChip(
-              label: Text(mode.label),
-              selected: mode == selectedMode,
-              onSelected: (_) => onModeSelected(mode),
-            ),
-          )
-          .toList(),
+    return SegmentedButton<InterviewMode>(
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment<InterviewMode>(
+          value: InterviewMode.supportive,
+          label: Text('友好模式'),
+        ),
+        ButtonSegment<InterviewMode>(
+          value: InterviewMode.pressure,
+          label: Text('压力模式'),
+        ),
+        ButtonSegment<InterviewMode>(
+          value: InterviewMode.deepDive,
+          label: Text('深挖模式'),
+        ),
+      ],
+      selected: {selectedMode},
+      onSelectionChanged: (selection) {
+        onModeSelected(selection.first);
+      },
     );
   }
 }

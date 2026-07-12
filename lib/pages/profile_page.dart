@@ -26,14 +26,9 @@ class ProfilePage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
             children: [
-              Text(
-                _nickname,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodyMedium,
+              _ProfileHeader(
+                nickname: _nickname,
+                subtitle: subtitle,
               ),
               const SizedBox(height: 24),
               Wrap(
@@ -55,36 +50,36 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 28),
-              Text(
-                '关于应用',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              const _InfoLine(
-                label: '定位',
-                value: 'AI 模拟面试与职场对话练习 Demo',
-              ),
-              const _InfoLine(
-                label: '当前能力',
-                value: '本地场景、本地 mock 对话、练习反馈、历史记录',
-              ),
-              const _InfoLine(
-                label: '记录方式',
-                value: '练习记录当前仅保存在运行内存中，重启后会清空',
+              const _InfoSection(
+                title: '关于应用',
+                children: [
+                  _InfoLine(
+                    label: '定位',
+                    value: 'AI 模拟面试与职场对话练习 Demo',
+                  ),
+                  _InfoLine(
+                    label: '当前能力',
+                    value: '本地场景、本地 mock 对话、练习反馈、历史记录',
+                  ),
+                  _InfoLine(
+                    label: '记录方式',
+                    value: '练习记录当前仅保存在运行内存中，重启后会清空',
+                  ),
+                ],
               ),
               const SizedBox(height: 28),
-              Text(
-                '版本信息',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              const _InfoLine(
-                label: '应用版本',
-                value: _appVersion,
-              ),
-              const _InfoLine(
-                label: '构建阶段',
-                value: 'OfferLab MVP / 本地演示版',
+              const _InfoSection(
+                title: '版本信息',
+                children: [
+                  _InfoLine(
+                    label: '应用版本',
+                    value: _appVersion,
+                  ),
+                  _InfoLine(
+                    label: '构建阶段',
+                    value: 'OfferLab MVP / 本地演示版',
+                  ),
+                ],
               ),
             ],
           );
@@ -97,6 +92,64 @@ class ProfilePage extends StatelessWidget {
     final month = dateTime.month.toString().padLeft(2, '0');
     final day = dateTime.day.toString().padLeft(2, '0');
     return '${dateTime.year}-$month-$day';
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
+    required this.nickname,
+    required this.subtitle,
+  });
+
+  final String nickname;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: colorScheme.primary.withValues(alpha: 0.16),
+              child: Icon(
+                Icons.person_outline,
+                color: colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nickname,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -137,6 +190,40 @@ class _StatPanel extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoSection extends StatelessWidget {
+  const _InfoSection({
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
         ),
       ),
     );

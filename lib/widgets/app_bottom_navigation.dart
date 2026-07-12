@@ -15,6 +15,7 @@ class AppBottomNavigation extends StatelessWidget {
     return NavigationBar(
       selectedIndex: currentIndex,
       onDestinationSelected: onDestinationSelected,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       destinations: const [
         NavigationDestination(
           icon: Icon(Icons.home_outlined),

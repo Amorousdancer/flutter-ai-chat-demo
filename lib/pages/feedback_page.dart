@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/feedback_result.dart';
 import '../models/practice_record.dart';
+import '../models/scenario.dart';
 
 class FeedbackPage extends StatelessWidget {
   const FeedbackPage({
@@ -15,6 +16,8 @@ class FeedbackPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('练习反馈'),
@@ -22,18 +25,41 @@ class FeedbackPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Card(
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colorScheme.outlineVariant),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${record.score} 分',
-                    style: Theme.of(context).textTheme.displaySmall,
+                    record.scenarioTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  Text(feedback.summary),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Chip(
+                        label: Text(record.mode.label),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      Chip(
+                        label: Text('${record.score} 分'),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    feedback.summary,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
                 ],
               ),
             ),
@@ -49,7 +75,11 @@ class FeedbackPage extends StatelessWidget {
             items: feedback.improvements,
           ),
           const SizedBox(height: 16),
-          Card(
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -82,7 +112,11 @@ class _FeedbackSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
