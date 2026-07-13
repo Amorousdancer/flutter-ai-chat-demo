@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../data/scenario_repository.dart';
 import '../models/scenario.dart';
+import '../services/interview_service.dart';
 import 'chat_page.dart';
 import 'scenario_detail_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  const HomePage({
+    super.key,
+    required this.interviewService,
+  });
+
+  final InterviewService interviewService;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +50,7 @@ class HomePage extends StatelessWidget {
                   builder: (_) => ChatPage(
                     scenario: scenario,
                     mode: selectedMode,
+                    service: interviewService,
                   ),
                 ),
               );
@@ -107,7 +114,7 @@ class _HomeSummary extends StatelessWidget {
                 ),
                 _SummaryBadge(
                   icon: Icons.chat_bubble_outline,
-                  label: 'Mock 对话',
+                  label: 'AI 流式对话',
                 ),
                 _SummaryBadge(
                   icon: Icons.insights_outlined,
@@ -137,6 +144,7 @@ class _ScenarioPreviewCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Material(
+      key: Key('scenario-card-${scenario.id}'),
       color: colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(8),
       clipBehavior: Clip.antiAlias,

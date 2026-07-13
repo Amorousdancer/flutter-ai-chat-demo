@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/chat_message.dart';
 import '../models/practice_record.dart';
 import '../models/scenario.dart';
+import '../services/interview_service.dart';
 import '../services/input_guard.dart';
 import '../services/practice_store.dart';
-import '../services/mock_interview_service.dart';
+import '../services/sensitive_data_sanitizer.dart';
 import 'feedback_page.dart';
 
 class ChatPage extends StatefulWidget {
@@ -13,13 +14,13 @@ class ChatPage extends StatefulWidget {
     super.key,
     required this.scenario,
     required this.mode,
-    this.service = const MockInterviewService(),
+    required this.service,
     this.inputGuard = const InputGuard(),
   });
 
   final Scenario scenario;
   final InterviewMode mode;
-  final MockInterviewService service;
+  final InterviewService service;
   final InputGuard inputGuard;
 
   @override
@@ -27,14 +28,19 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  static const SensitiveDataSanitizer _sanitizer = SensitiveDataSanitizer();
+
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late final List<ChatMessage> _messages;
-  bool _isReplying = false;
+  bool _isWaitingForReply = false;
+  bool _isStreamingReply = false;
   int _messageCounter = 0;
 
   int get _userMessageCount {
-    return _messages.where((message) => message.sender == ChatSender.user).length;
+    return _messages
+        .where((message) => message.sender == ChatSender.user)
+        .length;
   }
 
   bool get _canFinishPractice {
@@ -78,6 +84,8 @@ class _ChatPageState extends State<ChatPage> {
     return !_isReplying && _inputGuardResult.canSend;
   }
 
+  bool get _isReplying => _isWaitingForReply || _isStreamingReply;
+
   Future<void> _sendMessage() async {
     final guardResult = _inputGuardResult;
     if (!guardResult.canSend || _isReplying) {
@@ -95,27 +103,95 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {
       _messages.add(userMessage);
       _controller.clear();
-      _isReplying = true;
+      _isWaitingForReply = true;
     });
     _scrollToBottom();
 
-    final reply = await widget.service.generateReply(
-      scenario: widget.scenario,
-      mode: widget.mode,
-      history: List<ChatMessage>.unmodifiable(_messages),
-      userInput: content,
-      messageId: 'assistant-${_messageCounter++}',
-    );
+    try {
+      await _streamReply(
+        scenario: widget.scenario,
+        mode: widget.mode,
+        history: List<ChatMessage>.unmodifiable(_messages),
+        userInput: content,
+        messageId: 'assistant-${_messageCounter++}',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isWaitingForReply = false;
+        _isStreamingReply = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
+  }
+
+  Future<void> _streamReply({
+    required Scenario scenario,
+    required InterviewMode mode,
+    required List<ChatMessage> history,
+    required String userInput,
+    required String messageId,
+  }) async {
+    final streamedContent = StringBuffer();
+    ChatMessage? reply;
+    var replyIndex = -1;
+    var hasReceivedChunk = false;
+
+    if (!mounted) {
+      return;
+    }
+
+    await for (final chunk in widget.service.streamReply(
+      scenario: scenario,
+      mode: mode,
+      history: history,
+      userInput: userInput,
+      messageId: messageId,
+    )) {
+      if (!mounted) {
+        return;
+      }
+
+      streamedContent.write(chunk);
+      if (!hasReceivedChunk) {
+        hasReceivedChunk = true;
+        reply = ChatMessage(
+          id: messageId,
+          sender: ChatSender.assistant,
+          content: streamedContent.toString(),
+          timestamp: DateTime.now(),
+        );
+        setState(() {
+          _isWaitingForReply = false;
+          _isStreamingReply = true;
+          replyIndex = _messages.length;
+          _messages.add(reply!);
+        });
+      } else {
+        setState(() {
+          _messages[replyIndex] = reply!.copyWith(
+            content: streamedContent.toString(),
+          );
+        });
+      }
+      _scrollToBottom();
+    }
 
     if (!mounted) {
       return;
     }
 
     setState(() {
-      _messages.add(reply);
-      _isReplying = false;
+      _isWaitingForReply = false;
+      _isStreamingReply = false;
     });
-    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -137,39 +213,52 @@ class _ChatPageState extends State<ChatPage> {
       return;
     }
 
-    final feedback = widget.service.buildFeedback(
-      scenario: widget.scenario,
-      mode: widget.mode,
-      history: List<ChatMessage>.unmodifiable(_messages),
-    );
-    final lastUserMessage = _messages.lastWhere(
-      (message) => message.sender == ChatSender.user,
-      orElse: () => _messages.first,
-    );
-    final record = PracticeRecord(
-      id: 'record-${DateTime.now().microsecondsSinceEpoch}',
-      scenarioId: widget.scenario.id,
-      scenarioTitle: widget.scenario.title,
-      mode: widget.mode,
-      completedAt: DateTime.now(),
-      score: feedback.overallScore,
-      summary: feedback.summary,
-      strengths: feedback.strengths,
-      improvements: feedback.improvements,
-      optimizedReply: feedback.optimizedReply,
-      highlightQuote: lastUserMessage.content,
-    );
+    try {
+      final feedback = await widget.service.buildFeedback(
+        scenario: widget.scenario,
+        mode: widget.mode,
+        history: List<ChatMessage>.unmodifiable(_messages),
+      );
+      final lastUserMessage = _messages.lastWhere(
+        (message) => message.sender == ChatSender.user,
+        orElse: () => _messages.first,
+      );
+      final record = PracticeRecord(
+        id: 'record-${DateTime.now().microsecondsSinceEpoch}',
+        scenarioId: widget.scenario.id,
+        scenarioTitle: widget.scenario.title,
+        mode: widget.mode,
+        completedAt: DateTime.now(),
+        score: feedback.overallScore,
+        summary: feedback.summary,
+        strengths: feedback.strengths,
+        improvements: feedback.improvements,
+        optimizedReply: feedback.optimizedReply,
+        highlightQuote: _sanitizer.sanitize(lastUserMessage.content),
+      );
 
-    PracticeStore.instance.addRecord(record);
+      await PracticeStore.instance.addRecord(record);
 
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => FeedbackPage(
-          feedback: feedback,
-          record: record,
+      if (!mounted) {
+        return;
+      }
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => FeedbackPage(feedback: feedback, record: record),
         ),
-      ),
-    );
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
   }
 
   @override
@@ -247,14 +336,21 @@ class _ChatPageState extends State<ChatPage> {
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              itemCount: _messages.length + (_isReplying ? 1 : 0),
+              itemCount: _messages.length + (_isWaitingForReply ? 1 : 0),
               itemBuilder: (context, index) {
-                if (_isReplying && index == _messages.length) {
+                if (_isWaitingForReply && index == _messages.length) {
                   return const _TypingIndicator();
                 }
 
                 final message = _messages[index];
-                return _MessageBubble(message: message);
+                final isStreamingMessage =
+                    _isStreamingReply &&
+                    index == _messages.length - 1 &&
+                    message.sender == ChatSender.assistant;
+                return _MessageBubble(
+                  message: message,
+                  isStreaming: isStreamingMessage,
+                );
               },
             ),
           ),
@@ -316,9 +412,10 @@ class _ChatPageState extends State<ChatPage> {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, this.isStreaming = false});
 
   final ChatMessage message;
+  final bool isStreaming;
 
   @override
   Widget build(BuildContext context) {
@@ -332,18 +429,20 @@ class _MessageBubble extends StatelessWidget {
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: screenWidth * 0.78,
-          ),
+          constraints: BoxConstraints(maxWidth: screenWidth * 0.78),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: isUser ? colorScheme.primary : colorScheme.surfaceContainerHigh,
+              color: isUser
+                  ? colorScheme.primary
+                  : colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Text(
-                message.content,
+                message.content.isEmpty && isStreaming
+                    ? '...'
+                    : message.content,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: isUser ? colorScheme.onPrimary : colorScheme.onSurface,
                 ),

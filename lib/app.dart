@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 
 import 'pages/main_shell_page.dart';
+import 'services/interview_service.dart';
+import 'services/real_interview_service.dart';
 
 class OfferLabApp extends StatelessWidget {
-  const OfferLabApp({super.key});
+  OfferLabApp({
+    super.key,
+    InterviewService? interviewService,
+  }) : interviewService = interviewService ?? RealInterviewService();
+
+  final InterviewService interviewService;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +92,9 @@ class OfferLabApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const MainShellPage(),
+      home: MainShellPage(
+        interviewService: interviewService,
+      ),
     );
   }
 }

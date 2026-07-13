@@ -1,7 +1,4 @@
-enum ChatSender {
-  user,
-  assistant,
-}
+enum ChatSender { user, assistant }
 
 class ChatMessage {
   const ChatMessage({
@@ -15,4 +12,18 @@ class ChatMessage {
   final ChatSender sender;
   final String content;
   final DateTime timestamp;
+
+  ChatMessage copyWith({
+    String? id,
+    ChatSender? sender,
+    String? content,
+    DateTime? timestamp,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      sender: sender ?? this.sender,
+      content: content ?? this.content,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
 }
