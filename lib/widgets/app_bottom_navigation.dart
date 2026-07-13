@@ -18,18 +18,18 @@ class AppBottomNavigation extends StatelessWidget {
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
+          icon: Icon(Icons.home_outlined, key: Key('nav-home')),
+          selectedIcon: Icon(Icons.home, key: Key('nav-home-selected')),
           label: '首页',
         ),
         NavigationDestination(
-          icon: Icon(Icons.history_outlined),
-          selectedIcon: Icon(Icons.history),
+          icon: Icon(Icons.history_outlined, key: Key('nav-history')),
+          selectedIcon: Icon(Icons.history, key: Key('nav-history-selected')),
           label: '记录',
         ),
         NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          selectedIcon: Icon(Icons.person),
+          icon: Icon(Icons.person_outline, key: Key('nav-profile')),
+          selectedIcon: Icon(Icons.person, key: Key('nav-profile-selected')),
           label: '我的',
         ),
       ],

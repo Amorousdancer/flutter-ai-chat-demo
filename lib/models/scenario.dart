@@ -59,3 +59,10 @@ class Scenario {
   final List<String> tags;
   final String openingPrompt;
 }
+
+InterviewMode interviewModeFromName(String rawValue) {
+  return InterviewMode.values.firstWhere(
+    (mode) => mode.name == rawValue,
+    orElse: () => InterviewMode.supportive,
+  );
+}

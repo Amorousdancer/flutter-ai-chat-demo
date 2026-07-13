@@ -59,7 +59,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                   _InfoLine(
                     label: '当前能力',
-                    value: '本地场景、本地 mock 对话、练习反馈、历史记录',
+                    value: '本地场景、AI 流式对话、练习反馈、历史记录',
                   ),
                   _InfoLine(
                     label: '记录方式',
